@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TTS System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .card {
+            margin-bottom: 20px;
+        }
+        textarea {
+            width: 100%;
+            height: 100px;
+            margin: 10px 0;
+        }
+        .progress {
+            display: none;
+            margin: 10px 0;
+        }
+        .alert {
+            display: none;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-center mb-4">Text-to-Speech System</h1>
+        
+        <div class="card">
+            <div class="card-body">
+                <form id="ttsForm">
+                    <div class="mb-3">
+                        <label for="text" class="form-label">Text</label>
+                        <textarea class="form-control" id="text" rows="4" required placeholder="Enter text to convert to speech..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Generate Speech</button>
+                </form>
+
+                <div class="progress">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+                </div>
+
+                <div class="alert alert-success" role="alert" id="successAlert"></div>
+                <div class="alert alert-danger" role="alert" id="errorAlert"></div>
+
+                <audio id="audioPlayer" controls style="display: none; width: 100%; margin-top: 20px;"></audio>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize elements
+            const form = document.getElementById('ttsForm');
+            const textInput = document.getElementById('text');
+            const progress = document.querySelector('.progress');
+            const progressBar = progress.querySelector('.progress-bar');
+            const successAlert = document.getElementById('successAlert');
+            const errorAlert = document.getElementById('errorAlert');
+            const audioPlayer = document.getElementById('audioPlayer');
+
+            // Handle form submission
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const text = textInput.value.trim();
+                if (!text) {
+                    showAlert('Please enter some text to convert', 'danger');
+                    return;
+                }
+
+                // Show progress
+                progress.style.display = 'block';
+                progressBar.style.width = '0%';
+                audioPlayer.style.display = 'none';
+                hideAlerts();
+
+                try {
+                    const response = await fetch('/tts', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            text: text,
+                            lang: 'en'  // Always use English
+                        })
+                    });
+
+                    if (!response.ok) {
+                        const error = await response.json();
+                        throw new Error(error.error || 'Failed to generate speech');
+                    }
+
+                    progressBar.style.width = '50%';
+                    const blob = await response.blob();
+                    const audioUrl = URL.createObjectURL(blob);
+                    
+                    audioPlayer.src = audioUrl;
+                    audioPlayer.style.display = 'block';
+                    progressBar.style.width = '100%';
+                    showAlert('Speech generated successfully!', 'success');
+                } catch (error) {
+                    showAlert(error.message, 'danger');
+                } finally {
+                    setTimeout(() => {
+                        progress.style.display = 'none';
+                    }, 1000);
+                }
+            });
+
+            function showAlert(message, type) {
+                const alert = type === 'success' ? successAlert : errorAlert;
+                alert.textContent = message;
+                alert.style.display = 'block';
+                setTimeout(() => {
+                    alert.style.display = 'none';
+                }, 5000);
+            }
+
+            function hideAlerts() {
+                successAlert.style.display = 'none';
+                errorAlert.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html> 
